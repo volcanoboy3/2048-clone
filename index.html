@@ -16,6 +16,9 @@
           <h1 class="title">Merge Diner</h1>
           <p class="tagline">Cook it up &middot; serve it out</p>
         </div>
+        <button id="avatar-btn" class="avatar-btn" title="Dress your chef" aria-label="Dress your chef">
+          <span id="avatar-mount" class="avatar-mount"></span>
+        </button>
         <div class="wallet" title="Coins">
           <span class="coin-icon">🪙</span><span id="coins">0</span>
         </div>
@@ -38,6 +41,7 @@
           <div class="stat-label">Patience</div>
           <div id="hearts" class="hearts-row"></div>
         </div>
+        <button id="sell-btn" class="button sell-toggle">🏷️ Sell</button>
         <button id="shop-btn" class="button shop-open">🛍️ Shop</button>
       </div>
 
@@ -45,6 +49,11 @@
         <div class="orders-label">Orders</div>
         <div id="orders" class="orders"></div>
       </div>
+
+      <p id="sell-hint" class="sell-hint" hidden>
+        🏷️ <b>Sell mode</b> — tap any food to sell it for a few coins. Tap
+        <b>Sell</b> again to go back to serving.
+      </p>
 
       <div id="board" class="board">
         <div id="grid-bg" class="grid-bg"></div>
@@ -71,17 +80,16 @@
     <div id="shop-modal" class="shop-modal" hidden>
       <div class="shop-panel">
         <div class="shop-header">
-          <h2>🛍️ Skin Shop</h2>
+          <h2 id="shop-title">🛍️ Shop</h2>
           <div class="shop-wallet">
             <span class="coin-icon">🪙</span><span id="shop-coins">0</span>
           </div>
           <button id="shop-close" class="shop-close" aria-label="Close">✕</button>
         </div>
-        <p class="shop-sub">
-          Spend coins to restyle all your food — fancier plates, cooler shapes,
-          shinier everything.
-        </p>
-        <div id="shop-grid" class="shop-grid"></div>
+        <div id="shop-tabs" class="shop-tabs"></div>
+        <p id="shop-sub" class="shop-sub"></p>
+        <div id="shop-body" class="shop-body"></div>
+        <div id="shop-msg" class="shop-msg" hidden></div>
       </div>
     </div>
 

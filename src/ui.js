@@ -153,13 +153,13 @@ export class Renderer {
     this.bestEl.textContent = best;
   }
 
-  // A coin burst that floats up from the served tile toward the wallet.
-  playServe(info) {
+  // A coin burst that floats up from the served (or sold) tile.
+  playServe(info, kind = 'serve') {
     const float = document.createElement('div');
     float.className = 'serve-float';
     this.setPosition(float, { x: info.x, y: info.y });
     const inner = document.createElement('span');
-    inner.className = 'serve-float-inner';
+    inner.className = 'serve-float-inner' + (kind === 'sell' ? ' is-sell' : '');
     inner.textContent = `+${info.coins} 🪙`;
     inner.addEventListener('animationend', () => float.remove());
     float.appendChild(inner);

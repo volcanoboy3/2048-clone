@@ -1,6 +1,7 @@
 /* ============================================================
    Merge Diner — entry point. Wires logic, renderer, input, and shop,
-   and persists wallet / unlocks / best score / in-progress game.
+   and persists wallet / unlocks / wardrobe / redeemed codes / best /
+   in-progress game.
    ============================================================ */
 
 import './style.css';
@@ -8,12 +9,18 @@ import { Game } from './game.js';
 import { InputManager } from './input.js';
 import { Renderer } from './ui.js';
 import { Shop } from './shop.js';
+import { foodForTier, buyPrice } from './foods.js';
+import { buildAvatar, defaultOwnedClothing } from './character.js';
+import { findCode } from './codes.js';
 
 const KEYS = {
   best: 'diner-best',
   coins: 'diner-coins',
-  owned: 'diner-owned',
-  equipped: 'diner-equipped',
+  owned: 'diner-owned', // skin ids
+  equipped: 'diner-equipped', // skin id
+  clothingOwned: 'diner-clothing-owned',
+  clothingEquipped: 'diner-clothing-equipped',
+  codes: 'diner-codes',
   state: 'diner-state',
 };
 
@@ -56,13 +63,22 @@ const byId = (id) => document.getElementById(id);
 
 // ---- wallet + unlocks (persistent meta-progression) -------------
 
-// Welcome bonus on the very first visit, so the shop is fun to explore early.
 const firstVisit = localStorage.getItem(KEYS.coins) === null;
 let coins = firstVisit ? 150 : store.num(KEYS.coins);
 if (firstVisit) store.setNum(KEYS.coins, coins);
 let best = store.num(KEYS.best);
+
+// Tile skins
 let owned = new Set(store.json(KEYS.owned, ['classic']));
 let equipped = localStorage.getItem(KEYS.equipped) || 'classic';
+
+// Chef wardrobe
+let clothingOwned = new Set(store.json(KEYS.clothingOwned, defaultOwnedClothing()));
+defaultOwnedClothing().forEach((id) => clothingOwned.add(id)); // free items always owned
+let clothingEquipped = store.json(KEYS.clothingEquipped, {}) || {};
+
+// Redeemed codes
+const redeemed = new Set(store.json(KEYS.codes, []));
 
 function setCoins(value) {
   coins = Math.max(0, Math.round(value));
@@ -87,12 +103,27 @@ const renderer = new Renderer({
   overlayStats: byId('overlay-stats'),
 });
 
+// ---- chef avatar (topbar) ---------------------------------------
+
+const avatarMount = byId('avatar-mount');
+function renderAvatar() {
+  avatarMount.innerHTML = buildAvatar(clothingEquipped);
+}
+
+// ---- game (declared early so shop hooks can reach it) -----------
+
+const game = new Game(5);
+
 // ---- shop -------------------------------------------------------
 
 const shop = new Shop(
   {
     modal: byId('shop-modal'),
-    grid: byId('shop-grid'),
+    body: byId('shop-body'),
+    tabs: byId('shop-tabs'),
+    title: byId('shop-title'),
+    sub: byId('shop-sub'),
+    msg: byId('shop-msg'),
     closeBtn: byId('shop-close'),
     openBtn: byId('shop-btn'),
     coinsEl: byId('shop-coins'),
@@ -104,6 +135,7 @@ const shop = new Shop(
       setCoins(coins - amount);
       return true;
     },
+    // tile skins
     getOwned: () => [...owned],
     addOwned: (id) => {
       owned.add(id);
@@ -118,12 +150,69 @@ const shop = new Shop(
         /* ignore */
       }
     },
+    // food market
+    buyFood,
+    // chef wardrobe
+    getClothingOwned: () => [...clothingOwned],
+    addClothingOwned: (id) => {
+      clothingOwned.add(id);
+      store.setJson(KEYS.clothingOwned, [...clothingOwned]);
+    },
+    getClothingEquipped: () => clothingEquipped,
+    setClothingEquipped: (slot, id) => {
+      clothingEquipped = { ...clothingEquipped, [slot]: id };
+      store.setJson(KEYS.clothingEquipped, clothingEquipped);
+    },
+    onClothingChange: renderAvatar,
+    // codes
+    redeemCode,
   },
 );
 
-// ---- game -------------------------------------------------------
+// ---- market + codes (need game + wallet) ------------------------
 
-const game = new Game(5);
+function buyFood(tier) {
+  const food = foodForTier(tier);
+  const price = buyPrice(tier);
+  if (coins < price) {
+    return { ok: false, reason: 'coins', message: `Need ${price} 🪙 for a ${food.name}.` };
+  }
+  if (game.over) return { ok: false, message: 'Game over — start a new game first.' };
+  if (!game.grantFood(tier)) {
+    return { ok: false, message: 'No room on the board — make some space first!' };
+  }
+  setCoins(coins - price);
+  return { ok: true, message: `Served up a fresh ${food.name}! 🍽️` };
+}
+
+function redeemCode(text) {
+  const entry = findCode(text);
+  if (!entry) return { ok: false, message: 'Unknown code — check the spelling and try again.' };
+  if (redeemed.has(entry.code)) return { ok: false, message: `You already used ${entry.code}.` };
+
+  const r = entry.reward;
+  // Food rewards can fail if the board is full — don't consume the code then.
+  if (r.food) {
+    if (game.over) return { ok: false, message: 'Start a new game before redeeming a food code.' };
+    if (!game.grantFood(r.food)) {
+      return { ok: false, message: 'Make room on the board, then redeem this code again!' };
+    }
+  }
+  if (r.coins) setCoins(coins + r.coins);
+  if (r.clothing) {
+    clothingOwned.add(r.clothing);
+    store.setJson(KEYS.clothingOwned, [...clothingOwned]);
+  }
+  if (r.skin) {
+    owned.add(r.skin);
+    store.setJson(KEYS.owned, [...owned]);
+  }
+  redeemed.add(entry.code);
+  store.setJson(KEYS.codes, [...redeemed]);
+  return { ok: true, message: `🎉 ${entry.code} unlocked — ${r.note}!` };
+}
+
+// ---- game wiring ------------------------------------------------
 
 game.onUpdate = (state) => {
   renderer.render(state);
@@ -141,17 +230,39 @@ game.onServe = (info) => {
   renderer.playServe(info);
 };
 
+game.onSell = (info) => {
+  setCoins(coins + info.coins);
+  renderer.playServe(info, 'sell');
+};
+
 game.onBigMac = () => {
   document.body.classList.remove('bigmac-flash');
   void document.body.offsetWidth;
   document.body.classList.add('bigmac-flash');
 };
 
-// ---- input ------------------------------------------------------
+// ---- input + sell mode ------------------------------------------
 
-const input = new InputManager(byId('board'));
+const boardEl = byId('board');
+const sellBtn = byId('sell-btn');
+const sellHint = byId('sell-hint');
+let sellMode = false;
+
+function setSellMode(on) {
+  sellMode = on;
+  sellBtn.classList.toggle('active', on);
+  boardEl.classList.toggle('sell-mode', on);
+  sellHint.hidden = !on;
+}
+sellBtn.addEventListener('click', () => setSellMode(!sellMode));
+
+const input = new InputManager(boardEl);
 input.on('move', (direction) => game.move(direction));
 input.on('serve', ({ x, y }) => {
+  if (sellMode) {
+    game.sellTile(x, y);
+    return;
+  }
   const result = game.serve(x, y);
   if (!result.served && result.reason === 'no-order') renderer.wiggle(x, y);
 });
@@ -159,11 +270,13 @@ input.on('restart', restart);
 
 function restart() {
   store.remove(KEYS.state);
+  setSellMode(false);
   game.setup();
 }
 
 byId('new-game').addEventListener('click', restart);
 byId('retry').addEventListener('click', restart);
+byId('avatar-btn').addEventListener('click', () => shop.open('chef'));
 
 // ---- boot -------------------------------------------------------
 
@@ -177,7 +290,13 @@ for (let i = 0; i < game.size * game.size; i++) {
 
 renderer.setCoins(coins);
 renderer.setBest(best);
+renderAvatar();
 game.setup(store.json(KEYS.state, null));
 
 // Console debug handle.
-window.mergeDiner = { game, shop, addCoins: (n) => setCoins(coins + n) };
+window.mergeDiner = {
+  game,
+  shop,
+  addCoins: (n) => setCoins(coins + n),
+  grant: (tier) => game.grantFood(tier),
+};

@@ -11,7 +11,7 @@
    Directions: 0 up, 1 right, 2 down, 3 left.
    ============================================================ */
 
-import { MAX_TIER, coinsForTier } from './foods.js';
+import { MAX_TIER, coinsForTier, sellValue } from './foods.js';
 
 const DIRECTIONS = {
   0: { x: 0, y: -1 },
@@ -133,6 +133,7 @@ export class Game {
 
     this.onUpdate = () => {};
     this.onServe = () => {};
+    this.onSell = () => {};
     this.onBigMac = () => {};
   }
 
@@ -248,6 +249,48 @@ export class Game {
     }
     this.actuate();
     return { served: true, coins, tier: tile.value };
+  }
+
+  // ---- buy / sell (shop-driven) ----------------------------------
+
+  // Drop a ready-made food tile of `tier` onto a random empty cell. Used by
+  // the market and code rewards. Returns false if the board is full (so the
+  // caller can refuse the purchase). Only the new tile animates in.
+  grantFood(tier) {
+    if (this.over) return false;
+    if (!this.grid.cellsAvailable()) return false;
+    this.grid.eachCell((x, y, tile) => {
+      if (tile) tile.savePosition();
+    });
+    const cell = this.grid.randomAvailableCell();
+    const tile = new Tile(cell, Math.max(1, Math.min(MAX_TIER, tier)));
+    this.grid.insertTile(tile);
+    this.actuate();
+    return true;
+  }
+
+  // Sell (discard) the tile at (x, y) for a tiny number of coins. Selling
+  // never costs patience or strikes. Returns { sold, coins, tier }.
+  sellTile(x, y) {
+    if (this.over) return { sold: false };
+    const tile = this.grid.cellContent({ x, y });
+    if (!tile) return { sold: false };
+
+    const tier = tile.value;
+    const coins = sellValue(tier);
+    this.grid.eachCell((cx, cy, t) => {
+      if (t) t.savePosition();
+    });
+    this.grid.removeTile(tile);
+
+    // Never let the board run completely dry, or sliding would no-op forever.
+    if (this.grid.availableCells().length === this.size * this.size) {
+      for (let i = 0; i < this.startTiles; i++) this.addRandomTile();
+    }
+    this.onSell({ tier, coins, x, y });
+    if (!this.over) this.checkBoardStuck();
+    this.actuate();
+    return { sold: true, coins, tier };
   }
 
   // ---- movement --------------------------------------------------

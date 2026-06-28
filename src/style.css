@@ -607,6 +607,286 @@ body.bigmac-flash::after {
   background: #b0a08c;
 }
 
+/* ---------- Topbar chef avatar ---------- */
+.avatar-btn {
+  flex: 0 0 auto;
+  width: 46px;
+  height: 56px;
+  padding: 0;
+  border: none;
+  background: linear-gradient(160deg, #fff6e6, #f3e2c4);
+  border-radius: 12px;
+  cursor: pointer;
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.6), 0 2px 6px rgba(90, 60, 30, 0.25);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  overflow: hidden;
+  transition: transform 90ms ease;
+}
+.avatar-btn:hover {
+  transform: translateY(-1px);
+}
+.avatar-btn:active {
+  transform: translateY(1px);
+}
+.avatar-mount,
+.avatar-mount .avatar-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* ---------- Sell mode ---------- */
+.sell-toggle {
+  flex: 0 0 auto;
+  background: #7d8a5c;
+}
+.sell-toggle:hover {
+  background: #8c9a68;
+}
+.sell-toggle.active {
+  background: #b5142b;
+  box-shadow: 0 0 0 2px rgba(181, 20, 43, 0.3), 0 2px 0 rgba(0, 0, 0, 0.15);
+}
+.sell-hint {
+  text-align: center;
+  font-weight: 600;
+  font-size: 12.5px;
+  color: #9c4038;
+  background: #ffe7e2;
+  border: 1px solid #f3c3bb;
+  border-radius: 10px;
+  padding: 8px 10px;
+  margin: 0 0 10px;
+}
+.board.sell-mode .tile .tile-inner {
+  cursor: pointer;
+}
+.board.sell-mode .tile:hover .tile-inner {
+  outline: 3px solid rgba(224, 82, 74, 0.95);
+  outline-offset: 2px;
+}
+.board.sell-mode .tile.serveable::after {
+  opacity: 0.18;
+  animation: none;
+}
+.serve-float-inner.is-sell {
+  color: #d07a2e;
+}
+
+/* ---------- Shop: tabs + body + toast ---------- */
+.shop-tabs {
+  display: flex;
+  gap: 6px;
+  margin: 12px 0 4px;
+  flex-wrap: wrap;
+}
+.shop-tab {
+  flex: 1 1 auto;
+  background: rgba(0, 0, 0, 0.06);
+  color: var(--ink-soft);
+  border: none;
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-family: inherit;
+  font-weight: 800;
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 120ms ease, color 120ms ease;
+}
+.shop-tab:hover {
+  background: rgba(0, 0, 0, 0.1);
+}
+.shop-tab.active {
+  background: var(--button);
+  color: #fff7ec;
+}
+.shop-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 2px;
+}
+.shop-grid {
+  overflow: visible;
+}
+.shop-buy {
+  width: 100%;
+  font-size: 14px;
+  padding: 8px;
+  margin-top: auto;
+}
+.shop-buy.equipped {
+  background: #6a8f5a;
+  cursor: default;
+  opacity: 0.95;
+}
+.shop-buy.cant-afford {
+  background: #b0a08c;
+}
+.shop-msg {
+  margin-top: 10px;
+  text-align: center;
+  font-weight: 800;
+  font-size: 13px;
+  color: #2e7d44;
+  background: #e7f6ea;
+  border-radius: 10px;
+  padding: 9px 12px;
+}
+.shop-msg.bad {
+  color: #b5142b;
+  background: #fde7e7;
+}
+.shop-msg[hidden] {
+  display: none;
+}
+.shop-msg.pop {
+  animation: msg-pop 0.3s ease;
+}
+@keyframes msg-pop {
+  0% { transform: scale(0.92); opacity: 0.4; }
+  60% { transform: scale(1.04); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* ---------- Shop: food market ---------- */
+.market-grid {
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+}
+.market-card {
+  background: var(--card);
+  border-radius: 14px;
+  padding: 12px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  border: 2px solid color-mix(in srgb, var(--tier-bg, #ccc) 60%, transparent);
+  text-align: center;
+}
+.market-emoji {
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 34px;
+  border-radius: 14px;
+  background: linear-gradient(160deg, color-mix(in srgb, var(--tier-bg) 76%, white), var(--tier-bg));
+  box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.08);
+}
+.market-name {
+  font-size: 13px;
+  font-weight: 800;
+}
+
+/* ---------- Shop: chef wardrobe ---------- */
+.chef-stage {
+  display: flex;
+  justify-content: center;
+  padding: 6px 0 10px;
+}
+.chef-avatar {
+  width: 150px;
+  background: linear-gradient(180deg, #fff7ea 0%, #f1e2c6 100%);
+  border-radius: 18px;
+  padding: 10px 10px 0;
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.6), 0 6px 16px rgba(90, 60, 30, 0.2);
+}
+.chef-avatar .avatar-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.wardrobe-label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 800;
+  color: var(--ink-soft);
+  margin: 14px 2px 8px;
+}
+.wardrobe-grid {
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+}
+.wardrobe-card {
+  background: var(--card);
+  border-radius: 12px;
+  padding: 10px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  border: 2px solid rgba(0, 0, 0, 0.06);
+  text-align: center;
+}
+.wardrobe-card.rarity-rare { border-color: #6aa8d8; }
+.wardrobe-card.rarity-epic { border-color: #b07ad8; }
+.wardrobe-card.rarity-legendary {
+  border-color: #e6b53c;
+  box-shadow: 0 0 12px rgba(230, 181, 60, 0.3);
+}
+.wardrobe-card.worn {
+  outline: 2px solid #6a8f5a;
+  outline-offset: 1px;
+}
+.wardrobe-icon {
+  font-size: 30px;
+  line-height: 1;
+  height: 38px;
+  display: flex;
+  align-items: center;
+}
+.wardrobe-name {
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.15;
+  min-height: 28px;
+}
+
+/* ---------- Shop: codes ---------- */
+.codes-wrap {
+  padding: 8px 2px;
+}
+.codes-form {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.codes-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-family: inherit;
+  font-weight: 800;
+  font-size: 16px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 2px solid #d8c7ac;
+  background: #fff;
+  color: var(--ink);
+}
+.codes-input:focus {
+  outline: none;
+  border-color: var(--button);
+}
+.codes-submit {
+  flex: 0 0 auto;
+}
+.codes-hint {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  line-height: 1.5;
+  background: rgba(0, 0, 0, 0.04);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
 /* ---------- Responsive ---------- */
 @media (max-width: 420px) {
   .stat {
@@ -615,5 +895,9 @@ body.bigmac-flash::after {
   }
   .order-name {
     font-size: 9px;
+  }
+  .shop-tab {
+    font-size: 12px;
+    padding: 7px 9px;
   }
 }

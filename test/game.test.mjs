@@ -2,6 +2,7 @@
    No framework — plain assertions. */
 
 import { Game, Grid, Tile } from '../src/game.js';
+import { coinsForTier } from '../src/foods.js';
 
 let passed = 0;
 let failed = 0;
@@ -148,6 +149,47 @@ console.log('Serialize / restore round-trips the board and run state:');
   assert('served restored', restored.served === 3);
   assert('strikes restored', restored.strikes === 1);
   assert('tiles restored', tiles.length === 2 && tiles[0].v === 5 && tiles[1].v === 7);
+}
+
+console.log('Granting a food drops a tile of that tier onto the board:');
+{
+  const game = gameWith([[0, 0, 1]]);
+  const ok = game.grantFood(7);
+  const tiles = tilesOf(game);
+  assert('grant reported success', ok === true);
+  assert('board gained a tile', tiles.length === 2);
+  assert('a tier-7 (burger) tile exists', tiles.some((t) => t.v === 7));
+}
+
+console.log('grantFood refuses when the board is full:');
+{
+  const placements = [];
+  for (let x = 0; x < 5; x++) for (let y = 0; y < 5; y++) placements.push([x, y, 1]);
+  const game = gameWith(placements);
+  const ok = game.grantFood(9);
+  assert('grant refused on a full board', ok === false);
+  assert('board still holds 25 tiles', tilesOf(game).length === 25);
+}
+
+console.log('Selling a tile removes it and pays a tiny amount:');
+{
+  const game = gameWith([[2, 2, 5], [0, 0, 1]]);
+  let paid = null;
+  game.onSell = (info) => { paid = info.coins; };
+  const result = game.sellTile(2, 2);
+  assert('sell succeeded', result.sold === true);
+  assert('paid out at least one coin', result.coins >= 1);
+  assert('onSell fired with the payout', paid === result.coins);
+  assert('the sold tile is gone', !tilesOf(game).some((t) => t.x === 2 && t.y === 2));
+  assert('selling pays far less than serving the same tier', result.coins < coinsForTier(5));
+}
+
+console.log('Selling never costs patience or strikes:');
+{
+  const game = gameWith([[2, 2, 3]], [{ id: 1, tier: 9, patience: 4, maxPatience: 8 }]);
+  game.sellTile(2, 2);
+  assert('no strike from selling', game.strikes === 0);
+  assert('order patience untouched', game.orders[0].patience === 4);
 }
 
 console.log(`\n${passed} passed, ${failed} failed`);
