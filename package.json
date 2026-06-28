@@ -1,0 +1,15 @@
+{
+  "name": "2048-clone",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "A faithful clone of 2048 (the sliding-tile puzzle by Gabriele Cirulli), built with vanilla JS + Vite.",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "vite build",
+    "preview": "vite preview --host"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0"
+  }
+}

@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="theme-color" content="#faf8ef" />
+    <title>2048</title>
+  </head>
+  <body>
+    <div class="container">
+      <header class="heading">
+        <h1 class="title">2048</h1>
+        <div class="scores">
+          <div class="score-box">
+            <div class="score-label">Score</div>
+            <div id="score" class="score-value">0</div>
+          </div>
+          <div class="score-box">
+            <div class="score-label">Best</div>
+            <div id="best" class="score-value">0</div>
+          </div>
+        </div>
+      </header>
+
+      <div class="intro">
+        <p class="subtitle">
+          Join the numbers and get to the <strong>2048 tile!</strong>
+        </p>
+        <button id="new-game" class="button">New Game</button>
+      </div>
+
+      <div id="board" class="board">
+        <div class="grid-bg">
+          <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+          <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+          <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+          <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+        </div>
+        <div id="tile-layer" class="tile-layer"></div>
+        <div id="overlay" class="overlay" hidden>
+          <p id="overlay-msg" class="overlay-msg"></p>
+          <div class="overlay-buttons">
+            <button id="keep-going" class="button" hidden>Keep going</button>
+            <button id="retry" class="button">Try again</button>
+          </div>
+        </div>
+      </div>
+
+      <p class="explanation">
+        <strong>How to play:</strong> Use your <strong>arrow keys</strong> (or
+        <strong>swipe</strong> on touch) to move the tiles. Tiles with the same
+        number <strong>merge into one</strong> when they touch. Add them up to
+        reach <strong>2048!</strong>
+      </p>
+
+      <footer class="footer">
+        A clone of <a href="https://play2048.co" target="_blank" rel="noopener">2048</a>,
+        the puzzle by Gabriele Cirulli. Built with vanilla JS.
+      </footer>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
