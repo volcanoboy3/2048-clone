@@ -1,31 +1,40 @@
 /* ============================================================
-   2048 — renderer. Turns a game-state snapshot into DOM.
+   Merge Diner — renderer. Turns a game snapshot into DOM.
 
-   Animation trick (from the original): each tile is a positioned
-   wrapper (.tile) whose transform slides via a CSS transition, plus an
-   inner element (.tile-inner) that handles the scale "pop". Keeping the
-   pop on the child means it never fights the wrapper's position.
+   Tiles keep the original 2048 animation trick: a positioned wrapper
+   (.tile) slides via a CSS transform transition, while the inner element
+   (.tile-inner) does the scale "pop", so the two never fight.
    ============================================================ */
+
+import { foodForTier } from './foods.js';
 
 export class Renderer {
   constructor(refs) {
     this.tileLayer = refs.tileLayer;
+    this.effectLayer = refs.effectLayer || refs.tileLayer;
+    this.ordersEl = refs.ordersEl;
     this.scoreEl = refs.scoreEl;
     this.bestEl = refs.bestEl;
+    this.levelEl = refs.levelEl;
+    this.heartsEl = refs.heartsEl;
+    this.coinsEl = refs.coinsEl;
     this.overlay = refs.overlay;
-    this.overlayMsg = refs.overlayMsg;
-    this.keepGoingBtn = refs.keepGoingBtn;
-    this.displayedScore = 0;
-    this.initialized = false;
+    this.overlayTitle = refs.overlayTitle;
+    this.overlayStats = refs.overlayStats;
+    this.maxStrikes = 3;
   }
 
   render(state) {
-    this.clearTiles();
-    // Snapshot order is column-major and stable; merge sources are appended
-    // before their merged tile inside addTile, so stacking is already correct.
-    state.tiles.forEach((tile) => this.addTile(tile));
+    this.maxStrikes = state.maxStrikes;
+    const open = new Set(state.openTiers);
 
-    this.updateScore(state.score);
+    this.clearTiles();
+    state.tiles.forEach((tile) => this.addTile(tile, open));
+
+    this.renderOrders(state.orders);
+    this.scoreEl.textContent = state.score;
+    this.levelEl.textContent = state.level;
+    this.renderHearts(state.strikes, state.maxStrikes);
     this.updateOverlay(state);
   }
 
@@ -34,30 +43,46 @@ export class Renderer {
     while (layer.firstChild) layer.removeChild(layer.firstChild);
   }
 
-  addTile(tile) {
+  addTile(tile, openTiers) {
+    const food = foodForTier(tile.value);
     const wrapper = document.createElement('div');
+    wrapper.className = 'tile';
+    wrapper.dataset.tier = tile.value;
+    wrapper.dataset.x = tile.x;
+    wrapper.dataset.y = tile.y;
+    wrapper.style.setProperty('--tier-bg', food.bg);
+    wrapper.style.setProperty('--tier-fg', food.fg);
+    if (food.best) wrapper.classList.add('is-best');
+    if (openTiers.has(tile.value)) wrapper.classList.add('serveable');
+
     const inner = document.createElement('div');
-
-    const classes = ['tile', `tile-${tile.value}`];
-    if (tile.value > 2048) classes.push('tile-super');
-    wrapper.className = classes.join(' ');
-
     inner.className = 'tile-inner';
-    inner.textContent = tile.value;
 
-    // Render at the previous position first, then transition to the new one.
+    const emoji = document.createElement('span');
+    emoji.className = 'food-emoji';
+    emoji.textContent = food.emoji;
+    inner.appendChild(emoji);
+
+    const label = document.createElement('span');
+    label.className = 'food-label';
+    label.textContent = food.name;
+    inner.appendChild(label);
+
+    if (food.crown) {
+      const crown = document.createElement('span');
+      crown.className = 'crown';
+      crown.textContent = '👑';
+      inner.appendChild(crown);
+    }
+
     const from = tile.previousPosition || { x: tile.x, y: tile.y };
     this.setPosition(wrapper, from);
 
     if (tile.previousPosition) {
-      // Next frame: move to the current position (CSS transitions the slide).
-      requestAnimationFrame(() => {
-        this.setPosition(wrapper, { x: tile.x, y: tile.y });
-      });
+      requestAnimationFrame(() => this.setPosition(wrapper, { x: tile.x, y: tile.y }));
     } else if (tile.mergedFrom) {
       wrapper.classList.add('tile-merged');
-      // Render the two source tiles sliding into this cell underneath.
-      tile.mergedFrom.forEach((source) => this.addTile(source));
+      tile.mergedFrom.forEach((source) => this.addTile(source, openTiers));
     } else {
       wrapper.classList.add('tile-new');
     }
@@ -71,44 +96,107 @@ export class Renderer {
     el.style.setProperty('--row', position.y);
   }
 
-  updateScore(score) {
-    // First render (fresh game or resumed state): set the number without
-    // animating a "+N", which would otherwise pop in on page load.
-    if (!this.initialized) {
-      this.initialized = true;
-      this.displayedScore = score;
-      this.scoreEl.textContent = score;
-      return;
-    }
+  renderOrders(orders) {
+    const el = this.ordersEl;
+    while (el.firstChild) el.removeChild(el.firstChild);
 
-    const diff = score - this.displayedScore;
-    this.displayedScore = score;
-    this.scoreEl.textContent = score;
+    orders.forEach((order) => {
+      const food = foodForTier(order.tier);
+      const card = document.createElement('div');
+      card.className = 'order';
+      card.dataset.orderid = order.id;
+      card.style.setProperty('--tier-bg', food.bg);
 
-    if (diff > 0) {
-      const addition = document.createElement('div');
-      addition.className = 'score-addition';
-      addition.textContent = `+${diff}`;
-      addition.addEventListener('animationend', () => addition.remove());
-      this.scoreEl.parentNode.appendChild(addition);
+      const ratio = Math.max(0, Math.min(1, order.patience / order.maxPatience));
+      if (ratio <= 0.34) card.classList.add('urgent');
+
+      const bubble = document.createElement('div');
+      bubble.className = 'order-bubble';
+      bubble.textContent = food.emoji;
+      card.appendChild(bubble);
+
+      const name = document.createElement('div');
+      name.className = 'order-name';
+      name.textContent = food.name;
+      card.appendChild(name);
+
+      const meter = document.createElement('div');
+      meter.className = 'patience';
+      const bar = document.createElement('div');
+      bar.className = 'patience-bar';
+      bar.style.width = `${ratio * 100}%`;
+      bar.style.background = patienceColor(ratio);
+      meter.appendChild(bar);
+      card.appendChild(meter);
+
+      el.appendChild(card);
+    });
+  }
+
+  renderHearts(strikes, maxStrikes) {
+    const el = this.heartsEl;
+    while (el.firstChild) el.removeChild(el.firstChild);
+    const remaining = maxStrikes - strikes;
+    for (let i = 0; i < maxStrikes; i++) {
+      const heart = document.createElement('span');
+      heart.className = 'heart' + (i < remaining ? '' : ' lost');
+      heart.textContent = i < remaining ? '❤️' : '🤍';
+      el.appendChild(heart);
     }
+  }
+
+  setCoins(coins) {
+    this.coinsEl.textContent = coins;
   }
 
   setBest(best) {
     this.bestEl.textContent = best;
   }
 
+  // A coin burst that floats up from the served tile toward the wallet.
+  playServe(info) {
+    const float = document.createElement('div');
+    float.className = 'serve-float';
+    this.setPosition(float, { x: info.x, y: info.y });
+    const inner = document.createElement('span');
+    inner.className = 'serve-float-inner';
+    inner.textContent = `+${info.coins} 🪙`;
+    inner.addEventListener('animationend', () => float.remove());
+    float.appendChild(inner);
+    this.effectLayer.appendChild(float);
+
+    if (this.coinsEl) {
+      this.coinsEl.classList.remove('bump');
+      // reflow so the animation restarts each serve
+      void this.coinsEl.offsetWidth;
+      this.coinsEl.classList.add('bump');
+    }
+  }
+
+  // Quick shake when a tapped tile isn't wanted by anyone.
+  wiggle(x, y) {
+    const tileEl = this.tileLayer.querySelector(`.tile[data-x="${x}"][data-y="${y}"]`);
+    if (!tileEl) return;
+    tileEl.classList.remove('wiggle');
+    void tileEl.offsetWidth;
+    tileEl.classList.add('wiggle');
+  }
+
   updateOverlay(state) {
-    if (!state.terminated) {
+    if (!state.over) {
       this.overlay.hidden = true;
-      this.overlay.className = 'overlay';
       return;
     }
-
-    const won = state.won && !state.over;
     this.overlay.hidden = false;
-    this.overlay.className = `overlay ${won ? 'overlay-won' : 'overlay-over'}`;
-    this.overlayMsg.textContent = won ? 'You win!' : 'Game over!';
-    this.keepGoingBtn.hidden = !won;
+    this.overlayTitle.textContent =
+      state.strikes >= state.maxStrikes ? 'Too many walkouts!' : 'Kitchen jammed!';
+    const orderWord = state.served === 1 ? 'order' : 'orders';
+    this.overlayStats.textContent = `You served ${state.served} ${orderWord} and scored ${state.score} — reached level ${state.level}.`;
   }
+}
+
+function patienceColor(ratio) {
+  if (ratio > 0.6) return '#5fb86a';
+  if (ratio > 0.34) return '#e7b53c';
+  return '#e0524a';
 }

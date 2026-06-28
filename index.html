@@ -2,61 +2,87 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <meta name="theme-color" content="#faf8ef" />
-    <title>2048</title>
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <meta name="theme-color" content="#fbeede" />
+    <title>Merge Diner</title>
   </head>
-  <body>
-    <div class="container">
-      <header class="heading">
-        <h1 class="title">2048</h1>
-        <div class="scores">
-          <div class="score-box">
-            <div class="score-label">Score</div>
-            <div id="score" class="score-value">0</div>
-          </div>
-          <div class="score-box">
-            <div class="score-label">Best</div>
-            <div id="best" class="score-value">0</div>
-          </div>
+  <body data-skin="classic">
+    <div class="app">
+      <header class="topbar">
+        <div class="brand">
+          <h1 class="title">Merge Diner</h1>
+          <p class="tagline">Cook it up &middot; serve it out</p>
+        </div>
+        <div class="wallet" title="Coins">
+          <span class="coin-icon">🪙</span><span id="coins">0</span>
         </div>
       </header>
 
-      <div class="intro">
-        <p class="subtitle">
-          Join the numbers and get to the <strong>2048 tile!</strong>
-        </p>
-        <button id="new-game" class="button">New Game</button>
+      <div class="hud">
+        <div class="stat">
+          <div class="stat-label">Score</div>
+          <div id="score" class="stat-value">0</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Best</div>
+          <div id="best" class="stat-value">0</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Level</div>
+          <div id="level" class="stat-value">1</div>
+        </div>
+        <div class="stat stat-hearts">
+          <div class="stat-label">Patience</div>
+          <div id="hearts" class="hearts-row"></div>
+        </div>
+        <button id="shop-btn" class="button shop-open">🛍️ Shop</button>
+      </div>
+
+      <div class="orders-wrap">
+        <div class="orders-label">Orders</div>
+        <div id="orders" class="orders"></div>
       </div>
 
       <div id="board" class="board">
-        <div class="grid-bg">
-          <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
-          <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
-          <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
-          <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
-        </div>
+        <div id="grid-bg" class="grid-bg"></div>
         <div id="tile-layer" class="tile-layer"></div>
+        <div id="effect-layer" class="effect-layer"></div>
         <div id="overlay" class="overlay" hidden>
-          <p id="overlay-msg" class="overlay-msg"></p>
-          <div class="overlay-buttons">
-            <button id="keep-going" class="button" hidden>Keep going</button>
-            <button id="retry" class="button">Try again</button>
-          </div>
+          <p id="overlay-title" class="overlay-title">Game over</p>
+          <p id="overlay-stats" class="overlay-stats"></p>
+          <button id="retry" class="button">Try again</button>
         </div>
       </div>
 
-      <p class="explanation">
-        <strong>How to play:</strong> Use your <strong>arrow keys</strong> (or
-        <strong>swipe</strong> on touch) to move the tiles. Tiles with the same
-        number <strong>merge into one</strong> when they touch. Add them up to
-        reach <strong>2048!</strong>
+      <p class="howto">
+        <b>Slide</b> with arrow keys or swipe to merge food up the chain.
+        <b>Tap a glowing tile</b> to serve a customer who wants it. Keep them
+        happy — three walkouts and you're done!
       </p>
 
-      <footer class="footer">
-        A clone of <a href="https://play2048.co" target="_blank" rel="noopener">2048</a>,
-        the puzzle by Gabriele Cirulli. Built with vanilla JS.
-      </footer>
+      <div class="newgame-row">
+        <button id="new-game" class="button">New Game</button>
+      </div>
+    </div>
+
+    <div id="shop-modal" class="shop-modal" hidden>
+      <div class="shop-panel">
+        <div class="shop-header">
+          <h2>🛍️ Skin Shop</h2>
+          <div class="shop-wallet">
+            <span class="coin-icon">🪙</span><span id="shop-coins">0</span>
+          </div>
+          <button id="shop-close" class="shop-close" aria-label="Close">✕</button>
+        </div>
+        <p class="shop-sub">
+          Spend coins to restyle all your food — fancier plates, cooler shapes,
+          shinier everything.
+        </p>
+        <div id="shop-grid" class="shop-grid"></div>
+      </div>
     </div>
 
     <script type="module" src="/src/main.js"></script>

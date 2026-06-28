@@ -1,6 +1,12 @@
 /* ============================================================
-   2048 — input. Translates keyboard and touch gestures into
-   high-level events: 'move' (with a direction 0-3), 'restart'.
+   Merge Diner — input.
+   Slide: arrow keys / WASD / swipe -> 'move' (direction 0-3).
+   Serve: click a tile, or tap it on touch    -> 'serve' { x, y }.
+   Restart: R.
+
+   Gesture split on touch: a finger that travels past the threshold is a
+   swipe (move); a near-stationary touch is a tap and falls through to the
+   synthesized click, which the delegated click handler turns into a serve.
    ============================================================ */
 
 const KEY_MAP = {
@@ -12,18 +18,17 @@ const KEY_MAP = {
   KeyD: 1,
   KeyS: 2,
   KeyA: 3,
-  KeyK: 0, // vim
-  KeyL: 1,
-  KeyJ: 2,
-  KeyH: 3,
 };
 
-const SWIPE_THRESHOLD = 20; // px before a drag counts as a swipe
+const SWIPE_THRESHOLD = 24; // px before a drag counts as a swipe
 
 export class InputManager {
   constructor(boardEl) {
     this.handlers = {};
+    this.board = boardEl;
+    this.suppressClick = false;
     this.bindKeyboard();
+    this.bindServe(boardEl);
     this.bindTouch(boardEl);
   }
 
@@ -37,17 +42,27 @@ export class InputManager {
 
   bindKeyboard() {
     document.addEventListener('keydown', (event) => {
-      const modified =
-        event.altKey || event.ctrlKey || event.metaKey || event.shiftKey;
+      if (event.altKey || event.ctrlKey || event.metaKey) return;
       const direction = KEY_MAP[event.code];
-
-      if (!modified && direction !== undefined) {
+      if (direction !== undefined) {
         event.preventDefault();
         this.emit('move', direction);
-      } else if (!modified && event.code === 'KeyR') {
+      } else if (event.code === 'KeyR') {
         event.preventDefault();
         this.emit('restart');
       }
+    });
+  }
+
+  bindServe(boardEl) {
+    if (!boardEl) return;
+    boardEl.addEventListener('click', (event) => {
+      if (this.suppressClick) return;
+      const tileEl = event.target.closest('.tile');
+      if (!tileEl || !boardEl.contains(tileEl)) return;
+      const x = Number(tileEl.dataset.x);
+      const y = Number(tileEl.dataset.y);
+      if (Number.isInteger(x) && Number.isInteger(y)) this.emit('serve', { x, y });
     });
   }
 
@@ -65,16 +80,15 @@ export class InputManager {
         startY = event.touches[0].clientY;
         tracking = true;
       },
-      { passive: true }
+      { passive: true },
     );
 
     boardEl.addEventListener(
       'touchmove',
       (event) => {
-        // Stop the page from scrolling while swiping on the board.
-        if (tracking) event.preventDefault();
+        if (tracking) event.preventDefault(); // stop the page scrolling mid-swipe
       },
-      { passive: false }
+      { passive: false },
     );
 
     boardEl.addEventListener('touchend', (event) => {
@@ -87,15 +101,15 @@ export class InputManager {
       const absX = Math.abs(dx);
       const absY = Math.abs(dy);
 
-      if (Math.max(absX, absY) < SWIPE_THRESHOLD) return;
+      if (Math.max(absX, absY) < SWIPE_THRESHOLD) return; // a tap -> let click serve
 
-      let direction;
-      if (absX > absY) {
-        direction = dx > 0 ? 1 : 3; // right : left
-      } else {
-        direction = dy > 0 ? 2 : 0; // down : up
-      }
+      // A real swipe: emit a move and swallow the click the browser may fire.
+      const direction = absX > absY ? (dx > 0 ? 1 : 3) : dy > 0 ? 2 : 0;
       this.emit('move', direction);
+      this.suppressClick = true;
+      setTimeout(() => {
+        this.suppressClick = false;
+      }, 400);
     });
   }
 }

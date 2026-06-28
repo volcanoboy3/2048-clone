@@ -1,39 +1,44 @@
 /* ============================================================
-   2048 — game logic (no DOM).
+   Merge Diner — game logic (no DOM).
 
-   Coordinate convention (matches the original):
-     - cells[x][y]: x is the column, y is the row.
-     - Directions: 0 up, 1 right, 2 down, 3 left.
+   A 5x5 sliding-merge board of food. Sliding merges identical foods up
+   the chain (bread -> ... -> Big Mac). Customers queue with orders; you
+   SERVE a tile (via the UI) when its food matches an open order, which
+   clears the tile and pays coins. Orders lose patience on every move;
+   if too many walk out — or the board jams — it's game over.
 
-   Tiles carry `previousPosition` and `mergedFrom` so the renderer can
-   animate slides and merges; these are reset at the start of each move.
+   Coordinates match the original: cells[x][y], x = column, y = row.
+   Directions: 0 up, 1 right, 2 down, 3 left.
    ============================================================ */
 
+import { MAX_TIER, coinsForTier } from './foods.js';
+
 const DIRECTIONS = {
-  0: { x: 0, y: -1 }, // up
-  1: { x: 1, y: 0 }, //  right
-  2: { x: 0, y: 1 }, //  down
-  3: { x: -1, y: 0 }, // left
+  0: { x: 0, y: -1 },
+  1: { x: 1, y: 0 },
+  2: { x: 0, y: 1 },
+  3: { x: -1, y: 0 },
 };
 
+let tileSeq = 0;
+let orderSeq = 0;
+
 export class Tile {
-  constructor(position, value = 2) {
+  constructor(position, value = 1) {
+    this.id = ++tileSeq;
     this.x = position.x;
     this.y = position.y;
-    this.value = value;
+    this.value = value; // = food tier
     this.previousPosition = null;
     this.mergedFrom = null;
   }
-
   savePosition() {
     this.previousPosition = { x: this.x, y: this.y };
   }
-
   updatePosition(position) {
     this.x = position.x;
     this.y = position.y;
   }
-
   serialize() {
     return { position: { x: this.x, y: this.y }, value: this.value };
   }
@@ -44,7 +49,6 @@ export class Grid {
     this.size = size;
     this.cells = previousState ? this.fromState(previousState) : this.empty();
   }
-
   empty() {
     const cells = [];
     for (let x = 0; x < this.size; x++) {
@@ -53,7 +57,6 @@ export class Grid {
     }
     return cells;
   }
-
   fromState(state) {
     const cells = [];
     for (let x = 0; x < this.size; x++) {
@@ -65,14 +68,10 @@ export class Grid {
     }
     return cells;
   }
-
   randomAvailableCell() {
     const cells = this.availableCells();
-    if (cells.length) {
-      return cells[Math.floor(Math.random() * cells.length)];
-    }
+    if (cells.length) return cells[Math.floor(Math.random() * cells.length)];
   }
-
   availableCells() {
     const cells = [];
     this.eachCell((x, y, tile) => {
@@ -80,38 +79,30 @@ export class Grid {
     });
     return cells;
   }
-
   eachCell(callback) {
     for (let x = 0; x < this.size; x++) {
       for (let y = 0; y < this.size; y++) callback(x, y, this.cells[x][y]);
     }
   }
-
   cellsAvailable() {
     return this.availableCells().length > 0;
   }
-
   cellAvailable(cell) {
     return !this.cellOccupied(cell);
   }
-
   cellOccupied(cell) {
     return !!this.cellContent(cell);
   }
-
   cellContent(cell) {
     if (this.withinBounds(cell)) return this.cells[cell.x][cell.y];
     return null;
   }
-
   insertTile(tile) {
     this.cells[tile.x][tile.y] = tile;
   }
-
   removeTile(tile) {
     this.cells[tile.x][tile.y] = null;
   }
-
   withinBounds(position) {
     return (
       position.x >= 0 &&
@@ -120,7 +111,6 @@ export class Grid {
       position.y < this.size
     );
   }
-
   serialize() {
     const cellState = [];
     for (let x = 0; x < this.size; x++) {
@@ -134,85 +124,136 @@ export class Grid {
 }
 
 export class Game {
-  constructor(size = 4, winValue = 2048) {
+  constructor(size = 5) {
     this.size = size;
-    this.winValue = winValue;
-    this.startTiles = 2;
-    /** Called with a state snapshot whenever the board changes. */
+    this.startTiles = 3;
+    this.orderSlots = 4;
+    this.maxStrikes = 3;
+    this.servesPerLevel = 6;
+
     this.onUpdate = () => {};
+    this.onServe = () => {};
+    this.onBigMac = () => {};
   }
 
-  /** Start fresh, or restore a previously serialized state. */
+  // ---- lifecycle -------------------------------------------------
+
   setup(previousState) {
     if (previousState) {
       this.grid = new Grid(previousState.grid.size, previousState.grid.cells);
-      this.score = previousState.score;
-      this.over = previousState.over;
-      this.won = previousState.won;
-      this.keepPlaying = previousState.keepPlaying;
+      this.score = previousState.score || 0;
+      this.strikes = previousState.strikes || 0;
+      this.served = previousState.served || 0;
+      this.over = previousState.over || false;
+      this.orders = (previousState.orders || []).map((o) => ({ ...o }));
+      this.fillOrders();
     } else {
       this.grid = new Grid(this.size);
       this.score = 0;
+      this.strikes = 0;
+      this.served = 0;
       this.over = false;
-      this.won = false;
-      this.keepPlaying = false;
+      this.orders = [];
       for (let i = 0; i < this.startTiles; i++) this.addRandomTile();
+      this.fillOrders();
     }
     this.actuate();
   }
 
+  get level() {
+    return 1 + Math.floor(this.served / this.servesPerLevel);
+  }
+
   addRandomTile() {
-    if (this.grid.cellsAvailable()) {
-      const value = Math.random() < 0.9 ? 2 : 4;
-      const tile = new Tile(this.grid.randomAvailableCell(), value);
-      this.grid.insertTile(tile);
+    if (!this.grid.cellsAvailable()) return;
+    // Mostly bread, sometimes cheesy bread — your raw ingredients.
+    const value = Math.random() < 0.85 ? 1 : 2;
+    const tile = new Tile(this.grid.randomAvailableCell(), value);
+    this.grid.insertTile(tile);
+  }
+
+  // ---- orders ----------------------------------------------------
+
+  fillOrders() {
+    while (this.orders.length < this.orderSlots) {
+      this.orders.push(this.makeOrder());
     }
   }
 
-  /** Emit the current state to listeners (the renderer). */
-  actuate() {
-    this.onUpdate(this.snapshot());
+  makeOrder() {
+    const tier = this.pickOrderTier();
+    const patience = this.patienceFor(tier);
+    return { id: ++orderSeq, tier, patience, maxPatience: patience };
   }
 
-  snapshot() {
-    const tiles = [];
+  pickOrderTier() {
+    const level = this.level;
+    // Difficulty target climbs with level; cap so Big Macs aren't demanded.
+    const center = Math.min(2 + Math.floor((level - 1) * 0.8), 9);
+    const offsets = [-2, -1, 0, 0, 1];
+    const offset = offsets[Math.floor(Math.random() * offsets.length)];
+    const ceil = Math.min(level + 2, 11);
+    return Math.max(1, Math.min(ceil, center + offset));
+  }
+
+  patienceFor(tier) {
+    // Higher tiers need more moves to build; higher levels squeeze the clock.
+    const base = 7 + tier * 2 - Math.floor(this.level * 0.6);
+    return Math.max(5, Math.min(30, base));
+  }
+
+  openTiers() {
+    const tiers = new Set();
+    this.orders.forEach((o) => tiers.add(o.tier));
+    return tiers;
+  }
+
+  serveableExists() {
+    const wanted = this.openTiers();
+    let found = false;
     this.grid.eachCell((x, y, tile) => {
-      if (tile) tiles.push(tile);
+      if (tile && wanted.has(tile.value)) found = true;
     });
-    return {
-      tiles,
-      size: this.size,
-      score: this.score,
-      over: this.over,
-      won: this.won,
-      keepPlaying: this.keepPlaying,
-      terminated: this.isGameTerminated(),
-    };
+    return found;
   }
 
-  isGameTerminated() {
-    return this.over || (this.won && !this.keepPlaying);
+  // ---- serving ---------------------------------------------------
+
+  // Serve the tile at (x, y) to the most impatient matching customer.
+  serve(x, y) {
+    if (this.over) return { served: false };
+    const tile = this.grid.cellContent({ x, y });
+    if (!tile) return { served: false };
+
+    const matches = this.orders
+      .filter((o) => o.tier === tile.value)
+      .sort((a, b) => a.patience - b.patience);
+    if (!matches.length) return { served: false, reason: 'no-order' };
+
+    const order = matches[0];
+    const coins = coinsForTier(tile.value);
+
+    this.grid.removeTile(tile);
+    this.orders = this.orders.filter((o) => o.id !== order.id);
+    this.score += coins + tile.value * 2;
+    this.served += 1;
+
+    if (tile.value >= MAX_TIER) this.onBigMac({ tier: tile.value });
+
+    this.onServe({ tier: tile.value, coins, x, y, orderId: order.id });
+    this.fillOrders();
+    // Never let the board run completely dry, or sliding would no-op forever.
+    if (this.grid.availableCells().length === this.size * this.size) {
+      for (let i = 0; i < this.startTiles; i++) this.addRandomTile();
+    }
+    this.actuate();
+    return { served: true, coins, tier: tile.value };
   }
 
-  /** Save each tile's position and clear merge info before a move. */
-  prepareTiles() {
-    this.grid.eachCell((x, y, tile) => {
-      if (tile) {
-        tile.mergedFrom = null;
-        tile.savePosition();
-      }
-    });
-  }
+  // ---- movement --------------------------------------------------
 
-  moveTile(tile, cell) {
-    this.grid.cells[tile.x][tile.y] = null;
-    this.grid.cells[cell.x][cell.y] = tile;
-    tile.updatePosition(cell);
-  }
-
-  /** Move all tiles in a direction (0 up, 1 right, 2 down, 3 left). */
   move(direction) {
-    if (this.isGameTerminated()) return false;
+    if (this.over) return false;
 
     const vector = DIRECTIONS[direction];
     const traversals = this.buildTraversals(vector);
@@ -229,18 +270,12 @@ export class Game {
         const positions = this.findFarthestPosition(cell, vector);
         const next = this.grid.cellContent(positions.next);
 
-        // Merge with the next tile if it has the same value and hasn't
-        // already merged this turn.
         if (next && next.value === tile.value && !next.mergedFrom) {
-          const merged = new Tile(positions.next, tile.value * 2);
+          const merged = new Tile(positions.next, tile.value + 1);
           merged.mergedFrom = [tile, next];
-
           this.grid.insertTile(merged);
           this.grid.removeTile(tile);
           tile.updatePosition(positions.next);
-
-          this.score += merged.value;
-          if (merged.value === this.winValue) this.won = true;
         } else {
           this.moveTile(tile, positions.farthest);
         }
@@ -249,13 +284,52 @@ export class Game {
       });
     });
 
-    if (moved) {
-      this.addRandomTile();
-      if (!this.movesAvailable()) this.over = true;
-      this.actuate();
-    }
+    if (!moved) return false;
 
-    return moved;
+    this.addRandomTile();
+    this.tickOrders();
+    if (!this.over) this.checkBoardStuck();
+    this.actuate();
+    return true;
+  }
+
+  // Every successful move costs each waiting customer a tick of patience.
+  tickOrders() {
+    const survivors = [];
+    let walkouts = 0;
+    this.orders.forEach((o) => {
+      o.patience -= 1;
+      if (o.patience <= 0) walkouts += 1;
+      else survivors.push(o);
+    });
+    this.orders = survivors;
+    if (walkouts > 0) {
+      this.strikes += walkouts;
+      if (this.strikes >= this.maxStrikes) {
+        this.strikes = this.maxStrikes;
+        this.over = true;
+      }
+    }
+    this.fillOrders();
+  }
+
+  checkBoardStuck() {
+    if (!this.movesAvailable() && !this.serveableExists()) this.over = true;
+  }
+
+  prepareTiles() {
+    this.grid.eachCell((x, y, tile) => {
+      if (tile) {
+        tile.mergedFrom = null;
+        tile.savePosition();
+      }
+    });
+  }
+
+  moveTile(tile, cell) {
+    this.grid.cells[tile.x][tile.y] = null;
+    this.grid.cells[cell.x][cell.y] = tile;
+    tile.updatePosition(cell);
   }
 
   buildTraversals(vector) {
@@ -264,7 +338,6 @@ export class Game {
       traversals.x.push(pos);
       traversals.y.push(pos);
     }
-    // Always traverse from the farthest cell in the chosen direction.
     if (vector.x === 1) traversals.x.reverse();
     if (vector.y === 1) traversals.y.reverse();
     return traversals;
@@ -277,7 +350,6 @@ export class Game {
       previous = next;
       next = { x: previous.x + vector.x, y: previous.y + vector.y };
     } while (this.grid.withinBounds(next) && this.grid.cellAvailable(next));
-
     return { farthest: previous, next };
   }
 
@@ -289,7 +361,6 @@ export class Game {
     return this.grid.cellsAvailable() || this.tileMatchesAvailable();
   }
 
-  /** Is any adjacent pair mergeable? (used to detect game over) */
   tileMatchesAvailable() {
     for (let x = 0; x < this.size; x++) {
       for (let y = 0; y < this.size; y++) {
@@ -297,10 +368,7 @@ export class Game {
         if (!tile) continue;
         for (let dir = 0; dir < 4; dir++) {
           const vector = DIRECTIONS[dir];
-          const other = this.grid.cellContent({
-            x: x + vector.x,
-            y: y + vector.y,
-          });
+          const other = this.grid.cellContent({ x: x + vector.x, y: y + vector.y });
           if (other && other.value === tile.value) return true;
         }
       }
@@ -308,19 +376,40 @@ export class Game {
     return false;
   }
 
-  /** Dismiss the win overlay and keep playing past 2048. */
-  keepGoing() {
-    this.keepPlaying = true;
-    this.actuate();
+  // ---- output ----------------------------------------------------
+
+  actuate() {
+    this.onUpdate(this.snapshot());
+  }
+
+  snapshot() {
+    const tiles = [];
+    this.grid.eachCell((x, y, tile) => {
+      if (tile) tiles.push(tile);
+    });
+    const wanted = this.openTiers();
+    return {
+      tiles,
+      size: this.size,
+      orders: this.orders.map((o) => ({ ...o })),
+      openTiers: [...wanted],
+      score: this.score,
+      strikes: this.strikes,
+      maxStrikes: this.maxStrikes,
+      level: this.level,
+      served: this.served,
+      over: this.over,
+    };
   }
 
   serialize() {
     return {
       grid: this.grid.serialize(),
       score: this.score,
+      strikes: this.strikes,
+      served: this.served,
       over: this.over,
-      won: this.won,
-      keepPlaying: this.keepPlaying,
+      orders: this.orders.map((o) => ({ ...o })),
     };
   }
 }
