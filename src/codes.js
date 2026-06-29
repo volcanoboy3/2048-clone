@@ -10,20 +10,23 @@
    reward fields: { coins?, food?(tier), clothing?(id), skin?(id), note }
    ============================================================ */
 
+// Codes are deliberately opaque random tokens (no reward hints, no guessable
+// words, no ambiguous 0/O/1/I/L characters) so players can't just type "PIZZA"
+// or "FREE" to win. They're meant to be handed out, not guessed.
 export const CODES = [
-  { code: 'WELCOME',     reward: { coins: 100, food: 4, note: 'a free Sandwich + 100 coins' } },
-  { code: 'FREEBREAD',   reward: { food: 2, coins: 20, note: 'Cheesy Bread + 20 coins' } },
-  { code: 'DINERTIME',   reward: { coins: 150, note: '150 coins' } },
-  { code: 'CHEFLIFE',    reward: { food: 6, coins: 50, note: 'Fried Chicken + 50 coins' } },
-  { code: 'MERGEMASTER', reward: { food: 8, note: 'a hot plate of Pasta' } },
-  { code: 'PIZZAPARTY',  reward: { food: 9, note: 'a whole Pizza' } },
-  { code: 'STEAKNIGHT',  reward: { food: 10, note: 'a juicy Steak' } },
-  { code: 'BIGMAC',      reward: { food: 12, note: 'the legendary Big Mac 👑' } },
-  { code: 'GOLDRUSH',    reward: { coins: 300, note: '300 coins' } },
-  { code: 'SUPERCHEF',   reward: { clothing: 'hero', note: 'the Super Chef top' } },
-  { code: 'TOPCLASS',    reward: { clothing: 'tophat', note: 'a dapper Top Hat' } },
-  { code: 'STYLISH',     reward: { clothing: 'shades', note: 'a pair of Cool Shades' } },
-  { code: 'GOLDENTOUCH', reward: { skin: 'gold', note: 'the Midas Platter tile skin ✨' } },
+  { code: 'Y98D8F4',  reward: { coins: 100, food: 4, note: 'a free Sandwich + 100 coins' } },
+  { code: 'GXEVYW',   reward: { food: 2, coins: 20, note: 'Cheesy Bread + 20 coins' } },
+  { code: 'S6HN8GU6', reward: { coins: 150, note: '150 coins' } },
+  { code: 'JZRFT29V', reward: { food: 6, coins: 50, note: 'Fried Chicken + 50 coins' } },
+  { code: 'W4AFFZ',   reward: { food: 8, note: 'a hot plate of Pasta' } },
+  { code: '2HC4ABV',  reward: { food: 9, note: 'a whole Pizza' } },
+  { code: 'EK774SK',  reward: { food: 10, note: 'a juicy Steak' } },
+  { code: 'P7HR4CB',  reward: { food: 12, note: 'the legendary Big Mac 👑' } },
+  { code: 'NUXMPY6V', reward: { coins: 300, note: '300 coins' } },
+  { code: 'XQNQH9FU', reward: { clothing: 'hero', note: 'the Super Chef top' } },
+  { code: 'ES6NX2',   reward: { clothing: 'tophat', note: 'a dapper Top Hat' } },
+  { code: 'HSTTD5D',  reward: { clothing: 'shades', note: 'a pair of Cool Shades' } },
+  { code: 'YBEN2K5A', reward: { skin: 'gold', note: 'the Midas Platter tile skin ✨' } },
 ];
 
 export function normalizeCode(text) {

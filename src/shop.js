@@ -348,7 +348,11 @@ export class Shop {
     wrap.appendChild(form);
 
     wrap.appendChild(
-      el('p', 'codes-hint', 'Hint: try WELCOME to get started. More codes are hidden out there…'),
+      el(
+        'p',
+        'codes-hint',
+        'Codes are secret — handed out by the chef, hidden in updates, and shared by other players. Enter one above to redeem it.',
+      ),
     );
     body.appendChild(wrap);
     requestAnimationFrame(() => input.focus());
