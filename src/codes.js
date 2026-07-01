@@ -27,6 +27,17 @@ export const CODES = [
   { code: 'ES6NX2',   reward: { clothing: 'tophat', note: 'a dapper Top Hat' } },
   { code: 'HSTTD5D',  reward: { clothing: 'shades', note: 'a pair of Cool Shades' } },
   { code: 'YBEN2K5A', reward: { skin: 'gold', note: 'the Midas Platter tile skin ✨' } },
+  // ---- second batch (added 2026-07-01) ----
+  { code: 'QK7VM3',   reward: { coins: 500, note: '500 coins' } },
+  { code: 'H4ZPXN9',  reward: { coins: 250, note: '250 coins' } },
+  { code: 'T9BRUK2',  reward: { food: 11, note: 'a bowl of Mac & Cheese' } },
+  { code: 'VXE6HQ',   reward: { food: 5, coins: 40, note: 'a Croissant + 40 coins' } },
+  { code: 'RUZ7HKP',  reward: { clothing: 'crown', note: 'the Royal Crown 👑' } },
+  { code: 'M6QVEB',   reward: { clothing: 'tux', note: 'a sharp Black Tie outfit' } },
+  { code: 'PXK9RT4',  reward: { clothing: 'starshades', note: 'Star Shades ⭐' } },
+  { code: 'DQH5NV8',  reward: { clothing: 'goldshoes', note: 'Golden Kicks ✨' } },
+  { code: 'Y7KMXP2',  reward: { skin: 'royal', note: 'the Royal Velvet tile skin' } },
+  { code: 'GNX8VUH',  reward: { skin: 'neon', note: 'the Midnight Neon tile skin' } },
 ];
 
 export function normalizeCode(text) {
