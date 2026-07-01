@@ -130,6 +130,7 @@ export class Game {
     this.orderSlots = 4;
     this.maxStrikes = 5;
     this.servesPerLevel = 6;
+    this.doubleSpawnChance = 0.3; // chance a move drops TWO new tiles, not one
 
     this.onUpdate = () => {};
     this.onServe = () => {};
@@ -171,6 +172,13 @@ export class Game {
     const value = Math.random() < 0.85 ? 1 : 2;
     const tile = new Tile(this.grid.randomAvailableCell(), value);
     this.grid.insertTile(tile);
+  }
+
+  // After a valid move a new tile drops in — and there's a doubleSpawnChance
+  // roll for a second one to shoot out too (space permitting).
+  spawnAfterMove() {
+    this.addRandomTile();
+    if (Math.random() < this.doubleSpawnChance) this.addRandomTile();
   }
 
   // ---- orders ----------------------------------------------------
@@ -331,7 +339,7 @@ export class Game {
 
     if (!moved) return false;
 
-    this.addRandomTile();
+    this.spawnAfterMove();
     this.tickOrders();
     if (!this.over) this.checkBoardStuck();
     this.actuate();

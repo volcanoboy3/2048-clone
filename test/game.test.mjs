@@ -209,5 +209,28 @@ console.log('Selling never costs patience or strikes:');
   assert('order patience untouched', game.orders[0].patience === 4);
 }
 
+console.log('A move drops one tile, or two on a passing double-spawn roll:');
+{
+  const realRandom = Math.random;
+  try {
+    // Force the double-spawn roll to pass: merge (1 tile) + 2 spawns = 3 tiles.
+    Math.random = () => 0;
+    const g = gameWith([[0, 0, 1], [1, 0, 1]]);
+    g.addRandomTile = Game.prototype.addRandomTile.bind(g);
+    g.move(3);
+    assert('a passing roll spawns two new tiles', tilesOf(g).length === 3);
+
+    // Force the roll to fail: merge (1 tile) + 1 spawn = 2 tiles.
+    Math.random = () => 0.9;
+    const g2 = gameWith([[0, 0, 1], [1, 0, 1]]);
+    g2.addRandomTile = Game.prototype.addRandomTile.bind(g2);
+    g2.move(3);
+    assert('a failing roll spawns just one new tile', tilesOf(g2).length === 2);
+  } finally {
+    Math.random = realRandom;
+  }
+  assert('double-spawn chance is 30%', new Game(5).doubleSpawnChance === 0.3);
+}
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
