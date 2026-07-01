@@ -99,18 +99,27 @@ console.log('Tapping a tile nobody ordered does nothing:');
   assert('tile stays on the board', tilesOf(game).length === 1);
 }
 
-console.log('Running customers out of patience ends the game:');
+console.log('Running enough customers out of patience ends the game:');
 {
-  const orders = [
-    { id: 1, tier: 4, patience: 1, maxPatience: 8 },
-    { id: 2, tier: 5, patience: 1, maxPatience: 8 },
-    { id: 3, tier: 6, patience: 1, maxPatience: 8 },
-  ];
   // two breads that can merge, guaranteeing a real move
-  const game = gameWith([[0, 0, 1], [1, 0, 1]], orders);
-  game.move(3); // a move ticks patience; all three expire at once
-  assert('three strikes recorded', game.strikes === 3);
+  const game = gameWith([[0, 0, 1], [1, 0, 1]]);
+  // one about-to-expire order for each life the player has
+  game.orders = [];
+  for (let k = 0; k < game.maxStrikes; k++) {
+    game.orders.push({ id: k + 1, tier: 4, patience: 1, maxPatience: 8 });
+  }
+  game.move(3); // a move ticks patience; every order expires at once
+  assert('starts with 5 lives', game.maxStrikes === 5);
+  assert('strikes reach the max', game.strikes === game.maxStrikes);
   assert('game is over', game.over === true);
+}
+
+console.log('Orders give generous time to build the dish:');
+{
+  const game = gameWith([]); // served 0 -> level 1
+  assert('a low-tier order gives plenty of turns', game.patienceFor(2) >= 15);
+  assert('fancier orders get even more time', game.patienceFor(9) > game.patienceFor(2));
+  assert('patience is capped so it stays sane', game.patienceFor(12) <= 50);
 }
 
 console.log('A move that changes nothing is a no-op:');

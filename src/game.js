@@ -128,7 +128,7 @@ export class Game {
     this.size = size;
     this.startTiles = 3;
     this.orderSlots = 4;
-    this.maxStrikes = 3;
+    this.maxStrikes = 5;
     this.servesPerLevel = 6;
 
     this.onUpdate = () => {};
@@ -198,9 +198,11 @@ export class Game {
   }
 
   patienceFor(tier) {
-    // Higher tiers need more moves to build; higher levels squeeze the clock.
-    const base = 7 + tier * 2 - Math.floor(this.level * 0.6);
-    return Math.max(5, Math.min(30, base));
+    // Generous time to actually build the dish: higher tiers (which take more
+    // merges to make) get proportionally longer, with only a gentle squeeze
+    // as the levels climb.
+    const base = 12 + tier * 3 - Math.floor(this.level * 0.4);
+    return Math.max(10, Math.min(50, base));
   }
 
   openTiers() {
