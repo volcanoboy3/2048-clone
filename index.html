@@ -14,7 +14,7 @@
       <header class="topbar">
         <div class="brand">
           <h1 class="title">Merge Diner</h1>
-          <p class="tagline">Cook it up &middot; serve it out</p>
+          <p class="tagline" id="tagline">Cook it up &middot; serve it out</p>
         </div>
         <button id="avatar-btn" class="avatar-btn" title="Dress your chef" aria-label="Dress your chef">
           <span id="avatar-mount" class="avatar-mount"></span>
@@ -90,6 +90,28 @@
         <p id="shop-sub" class="shop-sub"></p>
         <div id="shop-body" class="shop-body"></div>
         <div id="shop-msg" class="shop-msg" hidden></div>
+      </div>
+    </div>
+
+    <div id="secret-modal" class="shop-modal" hidden>
+      <div class="shop-panel secret-panel">
+        <div class="shop-header">
+          <h2>🔒 Secret</h2>
+          <button id="secret-close" class="shop-close" aria-label="Close">✕</button>
+        </div>
+        <p class="shop-sub">Enter the password.</p>
+        <form id="secret-form" class="codes-form">
+          <input
+            id="secret-input"
+            class="codes-input"
+            type="password"
+            placeholder="Password…"
+            autocomplete="off"
+            spellcheck="false"
+          />
+          <button class="button codes-submit" type="submit">Unlock</button>
+        </form>
+        <div id="secret-msg" class="shop-msg" hidden></div>
       </div>
     </div>
 

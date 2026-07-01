@@ -21,6 +21,7 @@ const KEYS = {
   clothingOwned: 'diner-clothing-owned',
   clothingEquipped: 'diner-clothing-equipped',
   codes: 'diner-codes',
+  cheat: 'diner-cheat',
   state: 'diner-state',
 };
 
@@ -277,6 +278,90 @@ function restart() {
 byId('new-game').addEventListener('click', restart);
 byId('retry').addEventListener('click', restart);
 byId('avatar-btn').addEventListener('click', () => shop.open('chef'));
+
+// ---- secret coin button (password-gated) ------------------------
+// The tagline under the title is a hidden button. First tap asks for a
+// password; once unlocked, every tap pays out coins. Unlock persists.
+const CHEAT_PASSWORD = 'timmy486'; // compared case-insensitively
+const CHEAT_PAYOUT = 1000;
+let cheatUnlocked = store.num(KEYS.cheat) === 1;
+
+const secretSpot = byId('tagline');
+const secretModal = byId('secret-modal');
+const secretForm = byId('secret-form');
+const secretInput = byId('secret-input');
+const secretMsg = byId('secret-msg');
+const walletEl = document.querySelector('.wallet');
+
+function coinPop(amount) {
+  const pop = document.createElement('span');
+  pop.className = 'coin-pop';
+  pop.textContent = `+${amount}`;
+  pop.addEventListener('animationend', () => pop.remove());
+  walletEl.appendChild(pop);
+}
+
+function payCheat() {
+  setCoins(coins + CHEAT_PAYOUT);
+  coinPop(CHEAT_PAYOUT);
+}
+
+// Once unlocked the tagline is a genuine control, so make it keyboard- and
+// screen-reader-operable. (Left inert while locked to keep it hidden.)
+function markSecretInteractive() {
+  secretSpot.setAttribute('role', 'button');
+  secretSpot.setAttribute('tabindex', '0');
+  secretSpot.setAttribute('aria-label', 'Collect bonus coins');
+}
+if (cheatUnlocked) markSecretInteractive();
+
+secretSpot.addEventListener('click', () => {
+  if (cheatUnlocked) {
+    payCheat();
+    return;
+  }
+  secretMsg.hidden = true;
+  secretInput.value = '';
+  secretModal.hidden = false;
+  requestAnimationFrame(() => secretInput.focus());
+});
+
+// Keyboard activation (only reachable via Tab after unlock sets tabindex).
+secretSpot.addEventListener('keydown', (e) => {
+  if (e.code === 'Enter' || e.code === 'Space') {
+    e.preventDefault();
+    secretSpot.click();
+  }
+});
+
+secretForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  if (secretInput.value.trim().toLowerCase() === CHEAT_PASSWORD) {
+    cheatUnlocked = true;
+    store.setNum(KEYS.cheat, 1);
+    markSecretInteractive();
+    secretModal.hidden = true;
+    payCheat();
+  } else {
+    secretMsg.textContent = 'Wrong password.';
+    secretMsg.classList.add('bad');
+    secretMsg.hidden = false;
+    secretInput.classList.remove('shake');
+    void secretInput.offsetWidth;
+    secretInput.classList.add('shake');
+    secretInput.select();
+  }
+});
+
+byId('secret-close').addEventListener('click', () => {
+  secretModal.hidden = true;
+});
+secretModal.addEventListener('click', (e) => {
+  if (e.target === secretModal) secretModal.hidden = true;
+});
+document.addEventListener('keydown', (e) => {
+  if (e.code === 'Escape' && !secretModal.hidden) secretModal.hidden = true;
+});
 
 // ---- boot -------------------------------------------------------
 

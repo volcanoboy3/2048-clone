@@ -68,6 +68,7 @@ body {
 }
 
 .wallet {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -77,6 +78,24 @@ body {
   border-radius: 999px;
   font-size: 18px;
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Floating "+1000" from the secret coin button */
+.coin-pop {
+  position: absolute;
+  right: 10px;
+  top: 0;
+  font-size: 15px;
+  font-weight: 800;
+  color: #9be8a8;
+  pointer-events: none;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  animation: coin-pop 0.75s ease-out forwards;
+}
+@keyframes coin-pop {
+  0% { opacity: 0; transform: translateY(6px); }
+  25% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-24px); }
 }
 .wallet #coins {
   display: inline-block;
@@ -509,8 +528,12 @@ body.bigmac-flash::after {
   border-radius: 999px;
   font-size: 16px;
 }
-.shop-wallet.shake {
+.shop-wallet.shake,
+.codes-input.shake {
   animation: shake 0.4s ease;
+}
+.secret-panel {
+  width: min(360px, 100%);
 }
 @keyframes shake {
   0%, 100% { transform: translateX(0); }
