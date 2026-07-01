@@ -21,7 +21,6 @@ const KEYS = {
   clothingOwned: 'diner-clothing-owned',
   clothingEquipped: 'diner-clothing-equipped',
   codes: 'diner-codes',
-  cheat: 'diner-cheat',
   state: 'diner-state',
 };
 
@@ -280,11 +279,11 @@ byId('retry').addEventListener('click', restart);
 byId('avatar-btn').addEventListener('click', () => shop.open('chef'));
 
 // ---- secret coin button (password-gated) ------------------------
-// The tagline under the title is a hidden button. First tap asks for a
-// password; once unlocked, every tap pays out coins. Unlock persists.
+// The tagline under the title is a hidden button. EVERY tap opens a password
+// prompt; you must type the password each time to collect the coins — there is
+// no persistent "unlocked" state.
 const CHEAT_PASSWORD = 'timmy486'; // compared case-insensitively
 const CHEAT_PAYOUT = 1000;
-let cheatUnlocked = store.num(KEYS.cheat) === 1;
 
 const secretSpot = byId('tagline');
 const secretModal = byId('secret-modal');
@@ -301,47 +300,23 @@ function coinPop(amount) {
   walletEl.appendChild(pop);
 }
 
-function payCheat() {
-  setCoins(coins + CHEAT_PAYOUT);
-  coinPop(CHEAT_PAYOUT);
-}
-
-// Once unlocked the tagline is a genuine control, so make it keyboard- and
-// screen-reader-operable. (Left inert while locked to keep it hidden.)
-function markSecretInteractive() {
-  secretSpot.setAttribute('role', 'button');
-  secretSpot.setAttribute('tabindex', '0');
-  secretSpot.setAttribute('aria-label', 'Collect bonus coins');
-}
-if (cheatUnlocked) markSecretInteractive();
-
-secretSpot.addEventListener('click', () => {
-  if (cheatUnlocked) {
-    payCheat();
-    return;
-  }
+function openSecret() {
   secretMsg.hidden = true;
   secretInput.value = '';
   secretModal.hidden = false;
   requestAnimationFrame(() => secretInput.focus());
-});
+}
 
-// Keyboard activation (only reachable via Tab after unlock sets tabindex).
-secretSpot.addEventListener('keydown', (e) => {
-  if (e.code === 'Enter' || e.code === 'Space') {
-    e.preventDefault();
-    secretSpot.click();
-  }
-});
+secretSpot.addEventListener('click', openSecret);
 
 secretForm.addEventListener('submit', (e) => {
   e.preventDefault();
   if (secretInput.value.trim().toLowerCase() === CHEAT_PASSWORD) {
-    cheatUnlocked = true;
-    store.setNum(KEYS.cheat, 1);
-    markSecretInteractive();
+    secretInput.value = '';
+    secretMsg.hidden = true;
     secretModal.hidden = true;
-    payCheat();
+    setCoins(coins + CHEAT_PAYOUT);
+    coinPop(CHEAT_PAYOUT);
   } else {
     secretMsg.textContent = 'Wrong password.';
     secretMsg.classList.add('bad');
