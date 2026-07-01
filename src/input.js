@@ -1,6 +1,6 @@
 /* ============================================================
    Merge Diner — input.
-   Slide: arrow keys / WASD / swipe -> 'move' (direction 0-3).
+   Slide: arrow keys / swipe -> 'move' (direction 0-3).
    Serve: click a tile, or tap it on touch    -> 'serve' { x, y }.
    Restart: R.
 
@@ -9,15 +9,13 @@
    synthesized click, which the delegated click handler turns into a serve.
    ============================================================ */
 
+// Movement is arrow-keys only. The WASD letters were removed so they can never
+// collide with typing (e.g. entering a redeem code that contains W/A/S/D).
 const KEY_MAP = {
   ArrowUp: 0,
   ArrowRight: 1,
   ArrowDown: 2,
   ArrowLeft: 3,
-  KeyW: 0,
-  KeyD: 1,
-  KeyS: 2,
-  KeyA: 3,
 };
 
 const SWIPE_THRESHOLD = 24; // px before a drag counts as a swipe
@@ -43,6 +41,9 @@ export class InputManager {
   bindKeyboard() {
     document.addEventListener('keydown', (event) => {
       if (event.altKey || event.ctrlKey || event.metaKey) return;
+      // Don't hijack keys while the player is typing in a field (e.g. the
+      // code-redeem box) — otherwise arrow keys / R never reach the input.
+      if (isTypingTarget(event.target)) return;
       const direction = KEY_MAP[event.code];
       if (direction !== undefined) {
         event.preventDefault();
@@ -112,4 +113,11 @@ export class InputManager {
       }, 400);
     });
   }
+}
+
+// True when focus is in a text field, so game keys shouldn't be captured.
+function isTypingTarget(el) {
+  if (!el) return false;
+  const tag = el.tagName;
+  return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable === true;
 }
