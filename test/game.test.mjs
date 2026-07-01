@@ -2,7 +2,7 @@
    No framework — plain assertions. */
 
 import { Game, Grid, Tile } from '../src/game.js';
-import { coinsForTier } from '../src/foods.js';
+import { coinsForTier, buyPrice, sellValue } from '../src/foods.js';
 
 let passed = 0;
 let failed = 0;
@@ -171,17 +171,25 @@ console.log('grantFood refuses when the board is full:');
   assert('board still holds 25 tiles', tilesOf(game).length === 25);
 }
 
-console.log('Selling a tile removes it and pays a tiny amount:');
+console.log('Selling a tile removes it and pays out its sell value:');
 {
   const game = gameWith([[2, 2, 5], [0, 0, 1]]);
   let paid = null;
   game.onSell = (info) => { paid = info.coins; };
   const result = game.sellTile(2, 2);
   assert('sell succeeded', result.sold === true);
-  assert('paid out at least one coin', result.coins >= 1);
+  assert('paid out the tier sell value', result.coins === sellValue(5));
   assert('onSell fired with the payout', paid === result.coins);
   assert('the sold tile is gone', !tilesOf(game).some((t) => t.x === 2 && t.y === 2));
-  assert('selling pays far less than serving the same tier', result.coins < coinsForTier(5));
+  assert('selling returns less than buying the same food', result.coins < buyPrice(5));
+}
+
+console.log('Buy / sell prices are steep and anchored at the top tier:');
+{
+  assert('a Big Mac (tier 12) buys for 700', buyPrice(12) === 700);
+  assert('a Big Mac (tier 12) sells for 400', sellValue(12) === 400);
+  assert('pricier food always costs more to buy', buyPrice(12) > buyPrice(8) && buyPrice(8) > buyPrice(4));
+  assert('every tier sells for less than it buys', [3, 5, 7, 9, 11, 12].every((t) => sellValue(t) < buyPrice(t)));
 }
 
 console.log('Selling never costs patience or strikes:');

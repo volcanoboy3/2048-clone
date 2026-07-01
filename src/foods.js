@@ -31,15 +31,16 @@ export function coinsForTier(tier) {
   return Math.round(3 * Math.pow(tier, 1.7));
 }
 
-// Price to BUY a ready-made food of this tier from the market. A small base
-// fee plus most of what it would earn served, so fancier dishes cost more
-// (mid-tier "big foods" land around 50–100 coins; luxury plates run higher).
+// Price to BUY a ready-made food from the market. A steep curve — cheap early,
+// luxury late — anchored so the crown dish (Big Mac, top tier) costs 700 coins.
+// Fancier "good food" is dramatically more expensive than the humble stuff.
 export function buyPrice(tier) {
-  return 10 + Math.round(coinsForTier(tier) * 0.7);
+  return Math.round(700 * Math.pow(tier / MAX_TIER, 2.5));
 }
 
-// Coins for SELLING an unwanted tile — only a tiny slice of what serving it
-// would pay, so filling customer orders stays the real way to earn.
+// Coins for SELLING a food tile. Same shape as buying, anchored so a Big Mac
+// sells for 400 (~57% of its buy price); cheaper foods sell for proportionally
+// less. Selling a food always returns less than buying it.
 export function sellValue(tier) {
-  return Math.max(1, Math.round(coinsForTier(tier) * 0.12));
+  return Math.max(1, Math.round(400 * Math.pow(tier / MAX_TIER, 2.5)));
 }
